@@ -1,0 +1,19 @@
+graph TD
+    subgraph "Backend (Python/Flask)"
+        A[Webcam Feed] --> B[Behavior Module]
+        B --> C{Face Count?}
+        C -- "Count = 1" --> D[Liveness Module]
+        C -- "Count = 1" --> E[Recognition Module]
+        C -- "Count != 1" --> F[Generate Alert]
+        D --> G[Update State]
+        E --> G
+        F --> G
+        G --> H[Flask API Endpoints]
+        G --> I[(SQLite Database)]
+    end
+
+    subgraph "Frontend (Browser)"
+        J[Dashboard.html] -- "GET /status (JSON)" --> H
+        H -- "Response (JSON)" --> J
+        J --> K[Chart.js Visualization]
+    end

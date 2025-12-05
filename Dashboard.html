@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamShield Live Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #888888;
+            --accent-ok: #00c853;      
+            --accent-warn: #ffab00;    
+            --accent-alert: #d50000;  
+            --border-color: #2c2c2c;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        header h1 {
+            margin: 0;
+            font-weight: 700;
+        }
+
+        header p {
+            margin: 0.25rem 0 0;
+            color: var(--text-muted);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .status-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .status-card h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .status-card .value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        
+        .status-ok { color: var(--accent-ok); }
+        .status-warn { color: var(--accent-warn); }
+        .status-alert { color: var(--accent-alert); }
+
+        
+        .card-alert {
+            border-color: var(--accent-alert);
+            box-shadow: 0 0 15px rgba(213, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <header>
+            <h1>ExamShield Live Proctoring Dashboard</h1>
+            <p>Status updates automatically. Last updated: <span id="last-updated">never</span></p>
+        </header>
+
+        <div class="status-grid">
+            
+            <div class="status-card" id="card-api-status">
+                <h2>API Status</h2>
+                <p class="value" id="api-status">Connecting...</p>
+            </div>
+
+            
+            <div class="status-card" id="card-student">
+                <h2>Recognized Student</h2>
+                <p class="value" id="student-name">N/A</p>
+            </div>
+
+            
+            <div class="status-card" id="card-liveness">
+                <h2>Liveness Check</h2>
+                <p class="value" id="liveness-status">Checking...</p>
+            </div>
+
+            
+            <div class="status-card" id="card-behavior">
+                <h2>Behavior Alert</h2>
+                <p class="value" id="behavior-alert">None</p>
+            </div>
+            
+            
+            <div class="status-card" id="card-face-count">
+                <h2>Faces Detected</h2>
+                <p class="value" id="face-count">0</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = 'http://127.0.0.1:5000/status';
+        const POLLING_INTERVAL = 2000; 
+
+        
+        const apiStatusEl = document.getElementById('api-status');
+        const studentNameEl = document.getElementById('student-name');
+        const livenessStatusEl = document.getElementById('liveness-status');
+        const behaviorAlertEl = document.getElementById('behavior-alert');
+        const faceCountEl = document.getElementById('face-count');
+        const lastUpdatedEl = document.getElementById('last-updated');
+        
+        
+        const cardApiStatus = document.getElementById('card-api-status');
+        const cardStudent = document.getElementById('card-student');
+        const cardLiveness = document.getElementById('card-liveness');
+        const cardBehavior = document.getElementById('card-behavior');
+        const cardFaceCount = document.getElementById('card-face-count');
+
+        async function fetchStatus() {
+            try {
+                const response = await fetch(API_ENDPOINT);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error("Failed to fetch API status:", error);
+                showConnectionError();
+            }
+        }
+
+        function updateDashboard(data) {
+            // Update text content
+            apiStatusEl.textContent = data.status || 'N/A';
+            studentNameEl.textContent = data.recognized_student || 'N/A';
+            livenessStatusEl.textContent = data.liveness_status || 'N/A';
+            behaviorAlertEl.textContent = data.behavior_alert || 'None';
+            faceCountEl.textContent = data.face_count !== undefined ? data.face_count : 'N/A';
+            lastUpdatedEl.textContent = new Date().toLocaleTimeString();
+
+            // --- Update styles based on values ---
+            updateCardStatus(cardApiStatus, apiStatusEl, data.status === 'Running');
+            updateCardStatus(cardStudent, studentNameEl, data.recognized_student !== 'Unknown' && data.recognized_student !== 'N/A');
+            updateCardStatus(cardLiveness, livenessStatusEl, data.liveness_status === 'Live');
+            updateCardStatus(cardBehavior, behaviorAlertEl, data.behavior_alert === 'None');
+            updateCardStatus(cardFaceCount, faceCountEl, data.face_count === 1);
+        }
+        
+        function updateCardStatus(cardElement, textElement, isOk) {
+            // Reset styles
+            cardElement.classList.remove('card-alert');
+            textElement.classList.remove('status-ok', 'status-alert');
+
+            if (isOk) {
+                textElement.classList.add('status-ok');
+            } else {
+                cardElement.classList.add('card-alert');
+                textElement.classList.add('status-alert');
+            }
+        }
+
+        function showConnectionError() {
+            apiStatusEl.textContent = 'Connection Lost';
+            updateCardStatus(cardApiStatus, apiStatusEl, false);
+            // Reset other fields
+            studentNameEl.textContent = 'N/A';
+            livenessStatusEl.textContent = 'N/A';
+            behaviorAlertEl.textContent = 'N/A';
+            faceCountEl.textContent = 'N/A';
+        }
+
+        // Start polling
+        setInterval(fetchStatus, POLLING_INTERVAL);
+        fetchStatus(); // Fetch immediately on load
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1 @@
+click==8.1.7colorama==0.4.6dlib==19.24.4face-recognition==1.3.0face-recognition-models==0.3.0Flask==3.0.3Flask-Cors==4.0.1itsdangerous==2.2.0Jinja2==3.1.4MarkupSafe==2.1.5mediapipe==0.10.14numpy==1.26.4opencv-python==4.10.0.84pillow==10.4.0Werkzeug==3.0.3protobuf==3.20.3
